@@ -9,6 +9,7 @@ def obtener_valores_defecto():
     return {
         "nombre_usuario": "Juan Pérez",
         "idioma": "es-ES",
+        "tema": "Claro",
         "tamano_fuente": 14,
         "color_barra": "#cbd5e1",
         "color_letra": "#000000",
