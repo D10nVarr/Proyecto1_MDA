@@ -1,8 +1,83 @@
 import sys
+import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout,
-                               QVBoxLayout, QPushButton, QLabel, QMessageBox, QFrame)
+                               QVBoxLayout, QPushButton, QLabel, QMessageBox, QFrame,
+                               QDialog, QFormLayout, QLineEdit, QComboBox, QSpinBox,
+                               QColorDialog, QFileDialog)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 import configuraciones
+
+
+class SettingsDialog(QDialog):
+    def __init__(self, config_actual, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.resize(350, 250)
+
+        self.config_actual = config_actual
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QFormLayout(self)
+
+        self.in_nombre = QLineEdit(self.config_actual.get("nombre_usuario", ""))
+
+        self.in_idioma = QComboBox()
+        self.in_idioma.addItems(["es-ES", "en-US"])
+        self.in_idioma.setCurrentText(self.config_actual.get("idioma", "es-ES"))
+
+        self.in_fuente = QSpinBox()
+        self.in_fuente.setRange(8, 48)
+        self.in_fuente.setValue(self.config_actual.get("tamano_fuente", 14))
+
+        self.btn_color_barra = QPushButton("Elegir Color")
+        self.color_barra_val = self.config_actual.get("color_barra", "#cbd5e1")
+        self.btn_color_barra.clicked.connect(self.elegir_color_barra)
+
+        self.btn_color_letra = QPushButton("Elegir Color")
+        self.color_letra_val = self.config_actual.get("color_letra", "#000000")
+        self.btn_color_letra.clicked.connect(self.elegir_color_letra)
+
+        self.btn_foto = QPushButton("Seleccionar Archivo")
+        self.ruta_foto = self.config_actual.get("foto_perfil", "")
+        self.btn_foto.clicked.connect(self.elegir_foto)
+
+        btn_guardar = QPushButton("Guardar Configuraciones")
+        btn_guardar.clicked.connect(self.accept)
+
+        layout.addRow("Nombre de usuario:", self.in_nombre)
+        layout.addRow("Idioma:", self.in_idioma)
+        layout.addRow("Tamaño de fuente:", self.in_fuente)
+        layout.addRow("Color Menú:", self.btn_color_barra)
+        layout.addRow("Color Letra:", self.btn_color_letra)
+        layout.addRow("Foto de perfil:", self.btn_foto)
+        layout.addRow("", btn_guardar)
+
+    def elegir_color_barra(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.color_barra_val = color.name()
+
+    def elegir_color_letra(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.color_letra_val = color.name()
+
+    def elegir_foto(self):
+        ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar Foto", "", "Imágenes (*.png *.jpg *.jpeg)")
+        if ruta:
+            self.ruta_foto = ruta
+
+    def obtener_datos(self):
+        return {
+            "nombre_usuario": self.in_nombre.text(),
+            "idioma": self.in_idioma.currentText(),
+            "tamano_fuente": self.in_fuente.value(),
+            "color_barra": self.color_barra_val,
+            "color_letra": self.color_letra_val,
+            "foto_perfil": self.ruta_foto
+        }
 
 
 class MainWindow(QMainWindow):
@@ -51,12 +126,25 @@ class MainWindow(QMainWindow):
         content_frame.setObjectName("contentFrame")
         content_layout = QHBoxLayout(content_frame)
 
-        foto_frame = QFrame()
-        foto_frame.setObjectName("cardFrame")
-        foto_layout = QVBoxLayout(foto_frame)
-        self.lbl_foto = QLabel("AQUÍ\n\nMUESTRA\n\nLA FOTO\n\nCARGADA")
+        self.foto_frame = QFrame()
+        self.foto_frame.setObjectName("fotoFrame")
+        self.foto_frame.setFixedSize(220, 260)
+
+        foto_layout = QVBoxLayout(self.foto_frame)
+        foto_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.lbl_foto = QLabel()
         self.lbl_foto.setAlignment(Qt.AlignCenter)
+        self.lbl_foto.setScaledContents(True)
+        self.lbl_foto.setStyleSheet("border-radius: 15px;")
         foto_layout.addWidget(self.lbl_foto)
+
+        self.actualizar_foto()
+
+        envoltorio_foto = QVBoxLayout()
+        envoltorio_foto.addStretch()
+        envoltorio_foto.addWidget(self.foto_frame, 0, Qt.AlignCenter)
+        envoltorio_foto.addStretch()
 
         info_frame = QFrame()
         info_frame.setObjectName("cardFrame")
@@ -65,33 +153,53 @@ class MainWindow(QMainWindow):
         lbl_frase = QLabel("Solo se que no se nada\n\"Sócrates\"")
         lbl_frase.setAlignment(Qt.AlignCenter)
 
-        nombre = self.config.get('nombre_usuario', 'Sin definir')
-        idioma = self.config.get('idioma', 'Sin definir')
+        self.lbl_nombre = QLabel(f"Nombre: {self.config.get('nombre_usuario', '')}")
+        self.lbl_idioma = QLabel(f"Idioma: {self.config.get('idioma', '')}")
 
-        self.lbl_nombre = QLabel(f"Nombre: ({nombre})")
-        self.lbl_idioma = QLabel(f"Idioma: ({idioma})")
+        self.lbl_nombre.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.lbl_idioma.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.lbl_nombre.setContentsMargins(20, 0, 0, 0)
+        self.lbl_idioma.setContentsMargins(20, 0, 0, 0)
 
+        info_layout.addStretch()
         info_layout.addWidget(lbl_frase)
         info_layout.addSpacing(40)
         info_layout.addWidget(self.lbl_nombre)
         info_layout.addWidget(self.lbl_idioma)
         info_layout.addStretch()
 
-        content_layout.addWidget(foto_frame)
-        content_layout.addWidget(info_frame)
+        content_layout.addLayout(envoltorio_foto, 1)
+        content_layout.addWidget(info_frame, 2)
 
         main_layout.addWidget(menu_frame, 1)
         main_layout.addWidget(content_frame, 3)
 
-    def aplicar_estilos(self):#temporal pa pruebas
+    def actualizar_foto(self):
+        ruta_foto = self.config.get("foto_perfil", "")
+
+        if ruta_foto and os.path.exists(ruta_foto):
+            pixmap = QPixmap(ruta_foto)
+            self.lbl_foto.setPixmap(pixmap)
+        else:
+            self.lbl_foto.clear()
+            self.lbl_foto.setText("AQUÍ\n\nMUESTRA\n\nLA FOTO\n\nCARGADA")
+
+    def aplicar_estilos(self):
         color_texto_actual = self.config.get("color_letra", "#000000")
+        color_barra_actual = self.config.get("color_barra", "#cbd5e1")
+        tamano_fuente = self.config.get("tamano_fuente", 14)
 
         estilos = f"""
         QMainWindow {{
             background-color: #ffffff;
         }}
-        #menuFrame, #contentFrame {{
-            background-color: #cbd5e1; /* Gris azulado base */
+        #menuFrame {{
+            background-color: {color_barra_actual};
+            border-radius: 15px;
+            margin: 10px;
+        }}
+        #contentFrame {{
+            background-color: #cbd5e1;
             border-radius: 15px;
             margin: 10px;
         }}
@@ -100,6 +208,11 @@ class MainWindow(QMainWindow):
             border-radius: 15px;
             margin: 15px;
             padding: 20px;
+        }}
+        #fotoFrame {{
+            background-color: #ffffff;
+            border-radius: 15px;
+            margin: 15px;
         }}
         QPushButton, #botonFalso {{
             background-color: #ffffff;
@@ -114,18 +227,28 @@ class MainWindow(QMainWindow):
             background-color: #f1f5f9;
         }}
         QLabel {{
-            font-size: 14px;
+            font-size: {tamano_fuente}px;
             color: {color_texto_actual};
         }}
         """
         self.setStyleSheet(estilos)
 
+    def actualizar_interfaz(self):
+        self.lbl_nombre.setText(f"Nombre: {self.config.get('nombre_usuario', '')}")
+        self.lbl_idioma.setText(f"Idioma: {self.config.get('idioma', '')}")
+        self.actualizar_foto()
+        self.aplicar_estilos()
+
     def accion_simulada(self, menu_nombre):
         QMessageBox.information(self, f"Menú {menu_nombre}", f"Se está realizando la acción: {menu_nombre}")
 
     def abrir_settings(self):
-        QMessageBox.information(self, "Settings",
-                                "Aquí se abrirá la nueva ventana de configuraciones en la siguiente fase.")
+        dialogo = SettingsDialog(self.config, self)
+        if dialogo.exec():
+            self.config = dialogo.obtener_datos()
+            configuraciones.guardar_configuracion(self.config)
+            self.actualizar_interfaz()
+            QMessageBox.information(self, "Éxito", "Configuración guardada exitosamente.")
 
 
 if __name__ == "__main__":
