@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout,
                                QVBoxLayout, QPushButton, QLabel, QMessageBox, QFrame,
                                QDialog, QFormLayout, QLineEdit, QComboBox, QSpinBox,
                                QColorDialog, QFileDialog)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap
 import configuraciones
 
@@ -24,7 +24,7 @@ class SettingsDialog(QDialog):
         self.in_nombre = QLineEdit(self.config_actual.get("nombre_usuario", ""))
 
         self.in_idioma = QComboBox()
-        self.in_idioma.addItems(["es-ES","en-US"])
+        self.in_idioma.addItems(["es-ES", "en-US"])
         self.in_idioma.setCurrentText(self.config_actual.get("idioma", "es-ES"))
 
         self.in_fuente = QSpinBox()
@@ -86,7 +86,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Proyecto 1 - Manejo de Archivos")
         self.resize(850, 500)
 
-        # 1. Consultar al usuario
         respuesta = QMessageBox.question(
             self,
             "Carga Inicial",
@@ -103,10 +102,13 @@ class MainWindow(QMainWindow):
             if ruta:
                 ruta_seleccionada = ruta
 
-        self.config = configuraciones.cargar_configuracion(ruta_seleccionada)
+        self.config, mensaje_alerta = configuraciones.cargar_configuracion(ruta_seleccionada)
 
         self.setup_ui()
         self.aplicar_estilos()
+
+        if mensaje_alerta:
+            QTimer.singleShot(100, lambda: QMessageBox.warning(self, "Aviso de Carga", mensaje_alerta))
 
     def setup_ui(self):
         central_widget = QWidget()

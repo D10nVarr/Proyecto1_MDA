@@ -15,12 +15,13 @@ def obtener_valores_defecto():
         "foto_perfil": ""
     }
 
+
 def cargar_configuracion(ruta_archivo=None):
     global ARCHIVO_CONFIG
     config_default = obtener_valores_defecto()
 
     if not ruta_archivo:
-        return config_default
+        return config_default, None
 
     ARCHIVO_CONFIG = ruta_archivo
 
@@ -30,19 +31,27 @@ def cargar_configuracion(ruta_archivo=None):
 
             config_final = config_default.copy()
             config_final.update(config_cargada)
-            return config_final
+            return config_final, None
 
     except FileNotFoundError:
-        print("El archivo no existe. Cargando configuración por defecto.")
-        return config_default
+        mensaje = "El archivo no existe. Cargando configuración por defecto."
+        return config_default, mensaje
 
     except json.JSONDecodeError:
-        print("El archivo está corrupto o es inválido. Cargando configuración por defecto.")
-        return config_default
+        mensaje = "El archivo JSON está corrupto o es inválido. Cargando configuración por defecto."
+        return config_default, mensaje
 
     except PermissionError:
-        print("Archivo no apto. Cargando configuración por defecto.")
-        return config_default
+        mensaje = "Archivo no apto por falta de permisos. Cargando configuración por defecto."
+        return config_default, mensaje
+
+    except UnicodeDecodeError:
+        mensaje = "El archivo seleccionado no tiene formato de texto válido. Cargando configuración por defecto."
+        return config_default, mensaje
+
+    except Exception as e:
+        mensaje = f"Error inesperado al cargar el archivo: {e}. Cargando configuración por defecto."
+        return config_default, mensaje
 
 
 def guardar_configuracion(datos):
