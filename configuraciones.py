@@ -1,3 +1,4 @@
+# configuraciones.py
 import json
 import os
 
@@ -18,7 +19,10 @@ def cargar_configuracion():
 
     if os.path.exists(ARCHIVO_CONFIG):
         with open(ARCHIVO_CONFIG, "r", encoding="utf-8") as archivo:
-            return json.load(archivo)
+            config_cargada = json.load(archivo)
+            config_final = config_default.copy()
+            config_final.update(config_cargada)
+            return config_final
 
     return config_default
 
@@ -38,4 +42,5 @@ def guardar_configuracion(datos):
             indent=4,
             ensure_ascii=False
         )
+
     os.replace(ARCHIVO_TMP, ARCHIVO_CONFIG)
