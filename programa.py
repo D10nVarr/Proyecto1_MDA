@@ -24,7 +24,7 @@ class SettingsDialog(QDialog):
         self.in_nombre = QLineEdit(self.config_actual.get("nombre_usuario", ""))
 
         self.in_idioma = QComboBox()
-        self.in_idioma.addItems(["es-ES", "en-US"])
+        self.in_idioma.addItems(["es-ES","en-US"])
         self.in_idioma.setCurrentText(self.config_actual.get("idioma", "es-ES"))
 
         self.in_fuente = QSpinBox()
@@ -86,7 +86,24 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Proyecto 1 - Manejo de Archivos")
         self.resize(850, 500)
 
-        self.config = configuraciones.cargar_configuracion()
+        # 1. Consultar al usuario
+        respuesta = QMessageBox.question(
+            self,
+            "Carga Inicial",
+            "¿Desea cargar un archivo JSON de configuración externo?\n\n(De lo contrario se usaran valores por defecto).",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+
+        ruta_seleccionada = None
+
+        if respuesta == QMessageBox.Yes:
+            ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar Archivo de Configuración", "",
+                                                  "Archivos JSON (*.json)")
+            if ruta:
+                ruta_seleccionada = ruta
+
+        self.config = configuraciones.cargar_configuracion(ruta_seleccionada)
 
         self.setup_ui()
         self.aplicar_estilos()
@@ -245,10 +262,15 @@ class MainWindow(QMainWindow):
     def abrir_settings(self):
         dialogo = SettingsDialog(self.config, self)
         if dialogo.exec():
-            self.config = dialogo.obtener_datos()
-            configuraciones.guardar_configuracion(self.config)
-            self.actualizar_interfaz()
-            QMessageBox.information(self, "Éxito", "Configuración guardada exitosamente.")
+            nueva_config = dialogo.obtener_datos()
+            exito, mensaje = configuraciones.guardar_configuracion(nueva_config)
+
+            if exito:
+                self.config = nueva_config
+                self.actualizar_interfaz()
+                QMessageBox.information(self, "Éxito", mensaje)
+            else:
+                QMessageBox.warning(self, "Error al guardar", mensaje)
 
 
 if __name__ == "__main__":
