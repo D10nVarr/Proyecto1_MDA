@@ -165,11 +165,17 @@ class MainWindow(QMainWindow):
 
         self.config, mensaje_alerta = configuraciones.cargar_configuracion(ruta_seleccionada)
 
+        # Validación si el usuario eligió No cargar o cerró la ventana de archivos
+        if respuesta == QMessageBox.No:
+            mensaje_alerta = "Se usarán las configuraciones por defecto del sistema."
+        elif respuesta == QMessageBox.Yes and not ruta_seleccionada:
+            mensaje_alerta = "Canceló la selección. Se usarán las configuraciones por defecto del sistema."
+
         self.setup_ui()
         self.actualizar_interfaz()
 
         if mensaje_alerta:
-            QTimer.singleShot(100, lambda: QMessageBox.warning(self, "Aviso de Carga", mensaje_alerta))
+            QTimer.singleShot(100, lambda: QMessageBox.information(self, "Aviso de Carga", mensaje_alerta))
 
     def setup_ui(self):
         central_widget = QWidget()
